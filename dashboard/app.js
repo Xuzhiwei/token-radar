@@ -8,6 +8,10 @@
 // protocols, shrunk toward the global median; momentum comes from the 7d
 // TVL change, maturity from days listed with no token, breadth from the
 // chain count. Trading protocols are carried at recorded market cap.
+// Before pricing, the model's launch-eligibility screen (the snapshot
+// watchlist's own rule) drops pre-token entries that are not launch
+// candidates: CEX trackers, exchange-named products, and wrapped, staked
+// or later-version deployments of protocols that already trade.
 
 'use strict';
 
@@ -48,12 +52,16 @@ function renderChips() {
     ['Snapshot', stats.as_of],
     ['Protocols scanned', stats.protocol_count],
     ['Pre-token', stats.pre_token_count],
+    ['Screened out', stats.screened_out_count],
     ['Watchlist covered', stats.watchlist_count + '/' + stats.watchlist_count],
     ['Global median multiple', fmtX(stats.global_median_multiple)],
     ['Total implied (pre-token)', fmtUsd(stats.total_implied_usd)],
   ];
   $('statChips').innerHTML = chips
     .map(([k, v]) => '<div class="chip">' + k + ' <b>' + v + '</b></div>').join('');
+  $('screenedCount').textContent =
+    stats.screened_out_count + ' of the ' + stats.protocol_count +
+    ' protocols in this snapshot are screened out.';
 }
 
 function renderMultiples() {

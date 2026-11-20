@@ -12,7 +12,7 @@
     <div class="radar-mark" aria-hidden="true"><span></span></div>
     <div>
       <h1>TOKEN RADAR</h1>
-      <p class="tagline">Every protocol that records no token yet, ranked by what its launch would be worth — and how to farm it before it lands.</p>
+      <p class="tagline">Every launch candidate that records no token yet, ranked by what its launch would be worth — and how to farm it before it lands.</p>
     </div>
   </div>
   <div class="stat-chips" id="statChips"></div>
@@ -29,6 +29,14 @@
       momentum from its 7-day TVL change, maturity from how long it has run with no token,
       breadth from its chain count. Protocols already trading are carried at their recorded
       market cap and flagged, never mixed into the pre-token claim.
+    </p>
+    <p>
+      Before any of that, a <strong>launch-eligibility screen</strong> — the same rule the
+      snapshot itself uses to build its watchlist — removes the pre-token entries that are
+      not launch candidates at all: CEX trackers (a custodial exchange has no protocol token
+      to launch), products whose name begins with an exchange's name, and wrapped, staked or
+      later-version deployments of protocols whose token already trades.
+      <strong id="screenedCount"></strong> They are excluded from the board, never ranked.
     </p>
   </div>
   <div class="model-table">
@@ -101,8 +109,9 @@
 <footer>
   <p>
     Board built from the sealed DefiLlama protocols snapshot (TVL, 7-day change, market cap,
-    listing day, chains) — no names are hardcoded in the model; rerun the program on a fresh
-    snapshot and the board rebuilds itself. Implied values are this radar's own estimates of a
+    listing day, chains) — no protocol is priced by name; the only names in the code are the
+    exchange names in the eligibility screen, the same list the snapshot's own watchlist rule
+    uses. Rerun the program on a fresh snapshot and the board rebuilds itself. Implied values are this radar's own estimates of a
     future launch's fully diluted value, not predictions that a token will be issued.
     Farm plans are starting points, not financial advice.
   </p>

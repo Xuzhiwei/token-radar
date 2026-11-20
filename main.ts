@@ -45,7 +45,7 @@ function main(): void {
     as_of: snap.as_of,
     source: snap.source,
     model:
-      'implied = TVL x category multiple (median market-cap/TVL of the category\'s traded protocols, shrunk to the global median) x momentum (7d TVL change) x maturity (days listed with no token) x breadth (chain count); protocols already trading are carried at recorded market cap',
+      'implied = TVL x category multiple (median market-cap/TVL of the category\'s traded protocols, shrunk to the global median) x momentum (7d TVL change) x maturity (days listed with no token) x breadth (chain count); protocols already trading are carried at recorded market cap. Before pricing, a launch-eligibility screen mirroring the snapshot\'s own watchlist rule excludes pre-token protocols that are not launch candidates: CEX trackers, products whose name begins with an exchange\'s name, and wrapped, staked or later-version deployments of protocols whose token already trades',
     rows,
   };
   writeFileSync(join(out, 'board.json'), JSON.stringify(board) + '\n');
