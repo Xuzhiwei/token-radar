@@ -3,12 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Token Radar: pre-token protocols ranked by implied value</title>
+<title>Token Radar — pre-token protocols ranked by implied value</title>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<a class="skip" href="#board">Skip to the board</a>
-<main id="board" tabindex="-1" aria-busy="true"></main>
+<header class="topbar">
+  <div class="brand">
+    <div class="radar-mark" aria-hidden="true"><span></span></div>
+    <div>
+      <h1>TOKEN RADAR</h1>
+      <p class="tagline">Every protocol that records no token yet, ranked by what its launch would be worth — and how to farm it before it lands.</p>
+    </div>
+  </div>
+  <div class="stat-chips" id="statChips"></div>
+</header>
+
+<section class="model-strip" id="modelStrip">
+  <div class="model-text">
+    <h2>How the board is built</h2>
+    <p>
+      The radar learns its yardstick from the snapshot itself. For each category it takes the
+      <strong>median market-cap / TVL multiple</strong> of the protocols whose token already trades
+      (shrunk toward the global median when a category has few traded tokens), then prices every
+      pre-token protocol as <span class="formula">implied = TVL &times; multiple &times; momentum &times; maturity &times; breadth</span> —
+      momentum from its 7-day TVL change, maturity from how long it has run with no token,
+      breadth from its chain count. Protocols already trading are carried at their recorded
+      market cap and flagged, never mixed into the pre-token claim.
+    </p>
+  </div>
+  <div class="model-table">
+    <h3>Category multiples learned from the snapshot</h3>
+    <table id="multipleTable">
+      <thead><tr><th>Category</th><th>Traded</th><th>Median</th><th>Applied</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="controls">
+  <label class="search">
+    <span>Search</span>
+    <input id="q" type="search" placeholder="Protocol name or slug">
+  </label>
+  <label>
+    <span>Category</span>
+    <select id="cat"></select>
+  </label>
+  <label>
+    <span>Chain</span>
+    <select id="chain"></select>
+  </label>
+  <div class="segmented" role="group" aria-label="Status">
+    <button data-status="pre" class="on">Pre-token</button>
+    <button data-status="all">All</button>
+    <button data-status="trading">Trading</button>
+  </div>
+  <label class="check">
+    <input id="watch" type="checkbox"> Watchlist only
+  </label>
+  <label>
+    <span>Sort by</span>
+    <select id="sort">
+      <option value="implied">Implied value</option>
+      <option value="tvl">TVL</option>
+      <option value="change">7d change</option>
+      <option value="age">Days listed</option>
+      <option value="multiple">Multiple</option>
+    </select>
+  </label>
+  <div class="count" id="rowCount"></div>
+</section>
+
+<main>
+  <table class="board" id="board">
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Protocol</th>
+        <th>Status</th>
+        <th>Category</th>
+        <th>Chains</th>
+        <th class="num sortable" data-sort="tvl">TVL</th>
+        <th class="sortable" data-sort="change">7d</th>
+        <th class="num sortable" data-sort="multiple">Multiple</th>
+        <th class="num sortable" data-sort="implied">Implied value</th>
+      </tr>
+    </thead>
+    <tbody id="boardBody"></tbody>
+  </table>
+</main>
+
+<aside class="detail" id="detail" hidden>
+  <button class="close" id="detailClose" aria-label="Close detail">&times;</button>
+  <div id="detailBody"></div>
+</aside>
+
+<footer>
+  <p>
+    Board built from the sealed DefiLlama protocols snapshot (TVL, 7-day change, market cap,
+    listing day, chains) — no names are hardcoded in the model; rerun the program on a fresh
+    snapshot and the board rebuilds itself. Implied values are this radar's own estimates of a
+    future launch's fully diluted value, not predictions that a token will be issued.
+    Farm plans are starting points, not financial advice.
+  </p>
+</footer>
+
 <script src="../data.js"></script>
 <script src="app.js"></script>
 </body>
