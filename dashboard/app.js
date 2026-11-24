@@ -7,11 +7,15 @@
 // where the multiple is the median market-cap/TVL of the category's traded
 // protocols, shrunk toward the global median; momentum comes from the 7d
 // TVL change, maturity from days listed with no token, breadth from the
-// chain count. Trading protocols are carried at recorded market cap.
-// Before pricing, the model's launch-eligibility screen (the snapshot
-// watchlist's own rule) drops pre-token entries that are not launch
-// candidates: CEX trackers, exchange-named products, and wrapped, staked
-// or later-version deployments of protocols that already trade.
+// chain count. A protocol counts as trading when the snapshot records a
+// token for it (a CoinGecko id or a symbol): it is carried at its recorded
+// market cap, or, where the snapshot reports no cap for that token, at
+// TVL x category multiple with no launch adjustments. Before pricing, the
+// model's launch-eligibility screen (the snapshot watchlist's own rule)
+// drops entries that record no token and are not launch candidates:
+// CEX, Bridge, Canonical Bridge, Liquid Staking, Liquid Restaking and
+// Restaked BTC entries, exchange-named products, and wrapped, staked or
+// later-version deployments of protocols that already trade.
 
 'use strict';
 
@@ -52,8 +56,9 @@ function renderChips() {
     ['Snapshot', stats.as_of],
     ['Protocols scanned', stats.protocol_count],
     ['Pre-token', stats.pre_token_count],
+    ['Trading', stats.trading_count],
     ['Screened out', stats.screened_out_count],
-    ['Watchlist covered', stats.watchlist_count + '/' + stats.watchlist_count],
+    ['Watchlist covered', stats.watchlist_covered + '/' + stats.watchlist_count],
     ['Global median multiple', fmtX(stats.global_median_multiple)],
     ['Total implied (pre-token)', fmtUsd(stats.total_implied_usd)],
   ];
@@ -148,6 +153,13 @@ function renderBoard() {
 
 // ------------------------------------------------------------------ detail
 function breakdownRows(r) {
+  if (r.status === 'trading' && !(r.mcap_usd > 0)) {
+    return '<tr><td>Token recorded in the snapshot</td><td>' + (r.symbol ?? 'yes') + '</td></tr>' +
+      '<tr><td>Market cap</td><td>not reported</td></tr>' +
+      '<tr><td>TVL</td><td>' + fmtUsd(r.tvl_usd) + '</td></tr>' +
+      '<tr><td>&times; category multiple</td><td>' + fmtX(r.multiple) + '</td></tr>' +
+      '<tr class="total"><td>Carried at (yardstick value)</td><td>' + fmtUsd(r.implied_value_usd) + '</td></tr>';
+  }
   if (r.status === 'trading') {
     return '<tr><td>Recorded market cap</td><td>' + fmtUsd(r.mcap_usd) + '</td></tr>' +
       '<tr><td>TVL</td><td>' + fmtUsd(r.tvl_usd) + '</td></tr>' +
@@ -167,8 +179,11 @@ function openDetail(slug) {
   const r = rows.find((x) => x.slug === slug);
   if (!r) return;
   state.slug = slug;
+  const statusLabel = r.status === 'pre-token'
+    ? 'Pre-token'
+    : 'Trading' + (r.symbol ? ' (' + r.symbol + ')' : '') + (r.mcap_usd > 0 ? '' : ' — cap not in snapshot');
   const figs = [
-    ['Status', r.status === 'pre-token' ? 'Pre-token' : 'Trading' + (r.symbol ? ' (' + r.symbol + ')' : '')],
+    ['Status', statusLabel],
     ['Board rank', '#' + r.rank],
     ['Category', r.category],
     ['Chains', r.chains.join(', ') || '—'],

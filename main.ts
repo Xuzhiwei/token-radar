@@ -45,7 +45,7 @@ function main(): void {
     as_of: snap.as_of,
     source: snap.source,
     model:
-      'implied = TVL x category multiple (median market-cap/TVL of the category\'s traded protocols, shrunk to the global median) x momentum (7d TVL change) x maturity (days listed with no token) x breadth (chain count); protocols already trading are carried at recorded market cap. Before pricing, a launch-eligibility screen mirroring the snapshot\'s own watchlist rule excludes pre-token protocols that are not launch candidates: CEX trackers, products whose name begins with an exchange\'s name, and wrapped, staked or later-version deployments of protocols whose token already trades',
+      'implied = TVL x category multiple (median market-cap/TVL of the category\'s traded protocols, shrunk to the global median) x momentum (7d TVL change) x maturity (days listed with no token) x breadth (chain count). A protocol counts as already trading when the snapshot records a token for it (a CoinGecko id or a symbol, the snapshot\'s own test): with a recorded market cap it is carried at that cap; without one it is carried at TVL x category multiple, the yardstick without launch adjustments, and flagged unreported. Before pricing, a launch-eligibility screen mirroring the snapshot\'s own watchlist rule excludes protocols that record no token and are not launch candidates: CEX, Bridge, Canonical Bridge, Liquid Staking, Liquid Restaking and Restaked BTC entries (exchange trackers and wrapped, staked or bridged products), products whose name begins with an exchange\'s name, names carrying the words wrapped, staked or staking, and later-version deployments',
     rows,
   };
   writeFileSync(join(out, 'board.json'), JSON.stringify(board) + '\n');
@@ -62,7 +62,7 @@ function main(): void {
   const pre = rows.filter((r) => r.status === 'pre-token').length;
   console.log(
     'token-radar: ' + rows.length + ' rows (' + pre + ' pre-token, ' +
-    (rows.length - pre) + ' trading), watchlist ' + stats.watchlist_count + '/' +
+    (rows.length - pre) + ' trading), watchlist ' + stats.watchlist_covered + '/' +
     stats.watchlist_count + ' covered, dossier ' + dossier.length + ' bytes',
   );
 }

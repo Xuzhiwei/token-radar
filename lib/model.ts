@@ -23,37 +23,51 @@
 //   breadth            1 + 0.025 x min(chains - 1, 8): more chains, more
 //                      wallets a launch can reach.
 //
-// A protocol whose token already trades is carried at its recorded market
-// cap and flagged "trading", so the board separates what is still to come
-// from what already trades.
+// Whether a token already trades is the snapshot's own test, the one its
+// watchlist definition uses: a protocol records a token when the snapshot
+// gives it a CoinGecko id or a symbol. A recorded market cap alone does
+// not decide it, and neither does a missing one: hundreds of entries name
+// a token (a sub-deployment of Aave, of Uniswap, of Morpho) while the
+// snapshot reports no cap for that entry. Those protocols' tokens exist,
+// so they are carried as "trading", never priced as launches still to
+// come. A trading protocol with a recorded cap is carried at that cap;
+// one without is carried at TVL x its category multiple — the same
+// yardstick, with no launch adjustments — and flagged as unreported, so
+// the board separates what is still to come from what already trades.
 //
-// Before any pricing, a launch-eligibility screen decides which pre-token
-// protocols are launch candidates at all. It mirrors the rule the snapshot
-// itself uses to build its watchlist (kit RULES.txt, "The snapshot"): a
-// protocol is NOT a launch candidate when
+// Before any pricing, a launch-eligibility screen decides which of the
+// protocols that record no token are launch candidates at all. It mirrors
+// the full rule the snapshot itself uses to build its watchlist (input
+// README, "The watchlist"): a protocol is NOT a launch candidate when it
+// is a wrapped, staked or bridged product of another protocol, which the
+// snapshot's rule recognises by
 //
-//   - its category is CEX: the entry tracks a custodial exchange's own
-//     balances, and there is no protocol token waiting to launch;
-//   - its name begins with an exchange's name (Binance, Coinbase, Bybit,
-//     Kraken, Bitget, OKX, Bitfinex or Gemini): the entry is that
+//   - its category: CEX (a custodial exchange's own balances), Bridge or
+//     Canonical Bridge (assets custodied in transit, not a protocol's own
+//     product), or Liquid Staking, Liquid Restaking or Restaked BTC (a
+//     claim on an asset already staked — the snapshot's own example is
+//     WBTC, Bitcoin on Ethereum: a wrapped product, not a launch);
+//   - its name beginning with an exchange's name (Binance, Coinbase,
+//     Bybit, Kraken, Bitget, OKX, Bitfinex or Gemini): the entry is that
 //     exchange's own product, not an independent protocol;
-//   - its name carries a whole word wrapped, staked or staking, or ends in
-//     a version marker (a space followed by V2, v2, 2.0 or the like): a
-//     wrapped, staked or later-version deployment of a protocol whose
-//     token already trades, so the launch it could have has already
+//   - its name carrying a whole word wrapped, staked or staking, or
+//     ending in a version marker (a space followed by V2, v2, 2.0 or the
+//     like): a wrapped, staked or later-version deployment of a protocol
+//     whose token already trades, so the launch it could have has already
 //     happened under the parent name.
 //
 // Screened-out protocols are excluded from the board entirely and counted
 // in the stats the dashboard shows. The screen only decides candidacy for
-// protocols that record no token; a protocol already trading is carried
-// at its recorded market cap either way.
+// protocols that record no token; a protocol that records one is carried
+// as trading either way.
 //
 // A recorded market cap of zero or less is not a price: the snapshot uses
 // it as a placeholder for a token whose cap was not reported, and carrying
 // it onto the board would state an implied value of $0 or less. Such a
-// protocol is treated as recording no cap — it is priced by the model
-// like any other pre-token protocol (and screened like one), and its
-// placeholder cap never enters the multiples yardstick.
+// protocol is treated as recording no cap — if it records a token it is
+// carried as trading at the yardstick value, otherwise it is priced by
+// the model like any other pre-token protocol (and screened like one) —
+// and its placeholder cap never enters the multiples yardstick.
 
 export interface Protocol {
   slug: string;
@@ -115,8 +129,10 @@ export interface ModelStats {
   protocol_count: number;
   pre_token_count: number;
   trading_count: number;
+  trading_unreported_count: number;
   screened_out_count: number;
   watchlist_count: number;
+  watchlist_covered: number;
   global_median_multiple: number;
   multiples: MultipleStat[];
   total_implied_usd: number;
@@ -160,6 +176,15 @@ export function hasRecordedCap(p: Protocol): boolean {
   return p.mcap_usd != null && p.mcap_usd > 0;
 }
 
+/**
+ * The snapshot's own test for a token that exists: it gives the protocol a
+ * CoinGecko id or a symbol. Its watchlist counts a protocol as recording
+ * no token only when both are null.
+ */
+export function recordsToken(p: Protocol): boolean {
+  return p.gecko_id != null || p.symbol != null;
+}
+
 export function computeMultiples(protocols: Protocol[]): { globalMedian: number; stats: MultipleStat[] } {
   const traded = protocols.filter((p) => hasRecordedCap(p) && p.tvl_usd > 0);
   const globalMedian = median(traded.map((p) => (p.mcap_usd as number) / p.tvl_usd));
@@ -191,19 +216,29 @@ function multipleFor(category: string | null, stats: Map<string, MultipleStat>, 
 const EXCHANGE_NAME_PREFIXES = [
   'Binance', 'Coinbase', 'Bybit', 'Kraken', 'Bitget', 'OKX', 'Bitfinex', 'Gemini',
 ];
+// Categories the snapshot's watchlist rule treats as marking a wrapped,
+// staked or bridged product of another protocol rather than an
+// independent protocol awaiting its own launch.
+const PRODUCT_CATEGORIES = [
+  'Bridge', 'Canonical Bridge', 'Liquid Staking', 'Liquid Restaking', 'Restaked BTC',
+];
 const DERIVATIVE_WORD = /\b(?:wrapped|staked|staking)\b/i;
 // A space, then V<digits> (2, 3, 2.1, 12...) or a dotted version (2.0, 3.1...).
 const VERSION_MARKER = /\s(?:[vV]\d+(?:\.\d+)?|\d+\.\d+(?:\.\d+)?)$/;
 
 /**
- * Why a pre-token protocol is not a launch candidate, or null when it is
- * one. The three rules are the snapshot watchlist's own (see the header):
- * CEX category, an exchange's name at the front of the name, or a name
- * that marks the entry as a wrapped, staked or later-version product of
- * a protocol whose token already trades.
+ * Why a protocol that records no token is not a launch candidate, or null
+ * when it is one. The rules are the snapshot watchlist's own (see the
+ * header): a CEX or wrapped/staked/bridged-product category, an
+ * exchange's name at the front of the name, or a name that marks the
+ * entry as a wrapped, staked or later-version product of a protocol
+ * whose token already trades.
  */
 export function launchScreenReason(p: Protocol): string | null {
   if (p.category === 'CEX') return 'CEX category: a custodial exchange tracker';
+  if (p.category !== null && PRODUCT_CATEGORIES.includes(p.category)) {
+    return 'a wrapped, staked or bridged product (' + p.category + ' category)';
+  }
   for (const ex of EXCHANGE_NAME_PREFIXES) {
     if (p.name === ex || p.name.startsWith(ex + ' ')) {
       return 'begins with an exchange name (' + ex + ')';
@@ -424,24 +459,26 @@ export function buildBoard(snapshot: Snapshot): { rows: BoardRow[]; stats: Model
   const statMap = new Map(multStats.map((s) => [s.category, s]));
   const watch = new Set(snapshot.watchlist);
 
-  // Eligibility screen: pre-token protocols that are not launch candidates
-  // never reach the board. Protocols already trading are always carried.
+  // Eligibility screen: protocols that record no token and are not launch
+  // candidates never reach the board. Protocols that record a token are
+  // always carried, as trading.
   const candidates = snapshot.protocols.filter(
-    (p) => hasRecordedCap(p) || launchScreenReason(p) === null,
+    (p) => hasRecordedCap(p) || recordsToken(p) || launchScreenReason(p) === null,
   );
   const screenedOut = snapshot.protocols.length - candidates.length;
 
   const scored = candidates.map((p) => {
-    const trading = hasRecordedCap(p);
-    const multiple = trading
+    const capRecorded = hasRecordedCap(p);
+    const trading = capRecorded || recordsToken(p);
+    const multiple = capRecorded
       ? (p.mcap_usd as number) / Math.max(1, p.tvl_usd)
       : multipleFor(p.category, statMap, globalMedian);
-    const base = trading ? (p.mcap_usd as number) : p.tvl_usd * multiple;
+    const base = capRecorded ? (p.mcap_usd as number) : p.tvl_usd * multiple;
     const momentum = trading || p.change_7d == null ? 1 : 1 + 0.008 * clamp(p.change_7d, -40, 60);
     const days = p.listed_at ? daysBetween(p.listed_at, snapshot.as_of) : null;
     const maturity = trading || days == null ? 1 : 1 + 0.3 * (1 - Math.exp(-(days / 365.25) / 2.2));
     const breadth = trading ? 1 : 1 + 0.025 * Math.min(Math.max(p.chains.length - 1, 0), 8);
-    const implied = trading
+    const implied = capRecorded
       ? (p.mcap_usd as number)
       : Math.max(1, Math.round(base * momentum * maturity * breadth));
     const farm = farmSteps(p, trading, slugHash(p.slug) % 997);
@@ -486,8 +523,10 @@ export function buildBoard(snapshot: Snapshot): { rows: BoardRow[]; stats: Model
     protocol_count: snapshot.protocols.length,
     pre_token_count: scored.filter((r) => r.status === 'pre-token').length,
     trading_count: scored.filter((r) => r.status === 'trading').length,
+    trading_unreported_count: candidates.filter((p) => recordsToken(p) && !hasRecordedCap(p)).length,
     screened_out_count: screenedOut,
     watchlist_count: snapshot.watchlist.length,
+    watchlist_covered: scored.filter((r) => r.watchlist).length,
     global_median_multiple: Math.round(globalMedian * 1000) / 1000,
     multiples: multStats,
     total_implied_usd: scored.filter((r) => r.status === 'pre-token').reduce((s, r) => s + r.implied_value_usd, 0),

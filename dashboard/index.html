@@ -27,15 +27,23 @@
       (shrunk toward the global median when a category has few traded tokens), then prices every
       pre-token protocol as <span class="formula">implied = TVL &times; multiple &times; momentum &times; maturity &times; breadth</span> —
       momentum from its 7-day TVL change, maturity from how long it has run with no token,
-      breadth from its chain count. Protocols already trading are carried at their recorded
-      market cap and flagged, never mixed into the pre-token claim.
+      breadth from its chain count. A protocol counts as already trading when the snapshot
+      records a token for it — a CoinGecko id or a symbol, the snapshot's own test. Trading
+      protocols are carried at their recorded market cap; where the snapshot reports no cap
+      for a token it records, the protocol is carried at TVL &times; its category multiple —
+      the same yardstick, with no launch adjustments — and flagged, never mixed into the
+      pre-token claim.
     </p>
     <p>
       Before any of that, a <strong>launch-eligibility screen</strong> — the same rule the
-      snapshot itself uses to build its watchlist — removes the pre-token entries that are
-      not launch candidates at all: CEX trackers (a custodial exchange has no protocol token
-      to launch), products whose name begins with an exchange's name, and wrapped, staked or
-      later-version deployments of protocols whose token already trades.
+      snapshot itself uses to build its watchlist — removes the entries that record no token
+      yet are not launch candidates at all, because they are wrapped, staked or bridged
+      products of another protocol: the CEX, Bridge, Canonical Bridge, Liquid Staking,
+      Liquid Restaking and Restaked BTC categories (an exchange's balance tracker, a
+      bridge's custodied assets, a staking product's claim on an asset that already
+      trades — the snapshot's own example is WBTC, Bitcoin on Ethereum), products whose
+      name begins with an exchange's name, names carrying the words wrapped, staked or
+      staking, and later-version deployments of protocols whose token already trades.
       <strong id="screenedCount"></strong> They are excluded from the board, never ranked.
     </p>
   </div>
@@ -111,7 +119,7 @@
     Board built from the sealed DefiLlama protocols snapshot (TVL, 7-day change, market cap,
     listing day, chains) — no protocol is priced by name; the only names in the code are the
     exchange names in the eligibility screen, the same list the snapshot's own watchlist rule
-    uses. Rerun the program on a fresh snapshot and the board rebuilds itself. Implied values are this radar's own estimates of a
+    uses, and the screen's categories are the snapshot's own too. Rerun the program on a fresh snapshot and the board rebuilds itself. Implied values are this radar's own estimates of a
     future launch's fully diluted value, not predictions that a token will be issued.
     Farm plans are starting points, not financial advice.
   </p>
